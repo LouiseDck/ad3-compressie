@@ -1,0 +1,1 @@
+comprimeer1: main.c comprimeer1.c huffman_tree.c linkedlist.c
