@@ -4,12 +4,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
-#include <math.h>
 #include "comprimeer2.h"
 
 #define BUFSIZE 1023
 
-long long* spec_read_file(const char* filename, size_t* number){
+long long* spec_read_file(const char* filename, unsigned int* number){
     char *text = calloc(BUFSIZE + 1, sizeof(char));
     FILE *fp = fopen(filename, "r");
     if(fp != NULL){
@@ -23,9 +22,9 @@ long long* spec_read_file(const char* filename, size_t* number){
 
 }
 
-long long int* text_split(char* text, const char delimiter, size_t* number){
+long long int* text_split(char* text, const char delimiter, unsigned int* number){
     long long int* result = 0;
-    size_t delim_count = 1; // 1 teken na laatste delim
+    unsigned int delim_count = 1; // 1 teken na laatste delim
 
     char* temp_text = text;
     while(*temp_text){
@@ -53,15 +52,18 @@ long long int* text_split(char* text, const char delimiter, size_t* number){
 }
 
 unsigned char number_of_bits(long long nr){
-    unsigned char number = 0;
-    while(nr >>= 1) number++;
-    return number;
+    unsigned char count = 0;
+    while(nr > 0){
+        count++;
+        nr >>= 1;
+    }
+    return count;
 }
 
 unsigned char* nr_bits(long long* difs, size_t number, unsigned char* bits){
-    for(int i = 0; i < number; i++){
+    for(int i = 0; i < number - 1; i++){
         long long current_nr = difs[i];
-        char nr_bits = number_of_bits(current_nr);
+        unsigned char nr_bits = number_of_bits(current_nr);
         bits[i] = nr_bits;
     }
     return bits;
@@ -72,9 +74,7 @@ void write_bit(FILE* fp, long long** buffer, size_t* number, long long bit){
         (*buffer)[*number] = bit;
         (*number)++;
     } else{
-        int ding1 = (*buffer)[0];
-        int ding2 = (*buffer)[1];
-        int ding3 = (*buffer)[2];
+        (*buffer)[*number] = bit;
         //maak char van alle 8
         char cur_sum = 0;
         cur_sum += 128 * (*buffer)[0];
@@ -88,62 +88,69 @@ void write_bit(FILE* fp, long long** buffer, size_t* number, long long bit){
 
         fwrite(&cur_sum, sizeof(char), 1, fp);
         *number = 0;
-        (*buffer)[*number] = bit;
+
+        for(int i = 0; i < 8; i++){
+            (*buffer)[i] = 0;
+        }
     }
 }
 
 void nr_to_bits(long long* difs, unsigned char* bits, size_t number, FILE* fp){
     long long* buffer = calloc(sizeof(long long), 8);
     size_t nr_bits = 0;
-    for(int i = 0; i < number; i++){
+    for(int i = 0; i < number + 1; i++){
         long long current = difs[i];
         unsigned char current_size = bits[i];
         int size = current_size;
         // eerste 6 bits uitschrijven
         unsigned char mask = 1;
+        int shift = 5;
         for(int j = 0; j < 6; j++) {
-            unsigned char cur_bit = current_size & mask;
-            mask = (mask <<= 1) + (unsigned char) 1;
-            current_size >>= 1;
+            unsigned char cur_bit= current_size >> shift;
+            cur_bit &= mask;
+            shift--;
             write_bit(fp, &buffer, &nr_bits, cur_bit);
-            int dint = 0;
         }
         long long long_mask = 1;
+        int shift2 = size - 1;
         for(int j = 0; j < size; j++){
-            long long cur_bit = current & long_mask;
-            long_mask = (long_mask <<= 1) + 1;
-            current >>= 1;
+            long long cur_bit = current >> shift2;
+            cur_bit &= long_mask;
+            shift2--;
             write_bit(fp, &buffer, &nr_bits, cur_bit);
-            int dino = 0;
         }
-
-        int ding = 0;
     }
 }
 
 void spec_encodeer(const char* filename, const char* output_file){
-    size_t number_of_numbers = 0;
+    unsigned int number_of_numbers = 0;
     long long* ints = spec_read_file(filename, &number_of_numbers);
     long long* difs = calculate_differences(ints, number_of_numbers);
     unsigned char* bits = calloc(sizeof(unsigned char), number_of_numbers);
-    nr_bits(difs, number_of_numbers, bits);
+    nr_bits(difs, number_of_numbers + 1, bits);
     FILE* fp = fopen(output_file, "wb");
+
+    fwrite(&number_of_numbers, sizeof(unsigned int), 1, fp);
+
+    for(int i = 0; i < number_of_numbers; i++){
+        printf("%lli\n", difs[i]);
+        printf("%lli\n", ints[i]);
+        printf("%c\n\n", bits[i] + '0');
+    }
 
     nr_to_bits(difs, bits, number_of_numbers, fp);
 }
 
-//TODO: fix eerste wel bijhouden
-long long* calculate_differences(long long* ints, size_t number){
+long long* calculate_differences(long long* ints, unsigned int number){
     long long* difs = calloc(sizeof(long long), number);
-    for(size_t i = 0; i < number - 1; i++){
-        long long ding = ints[i+1];
-        long long ding2 = ints[i];
-        difs[i] = ints[i+1] - ints[i];
+    difs[0] = ints[0];
+    for(size_t i = 1; i < number; i++){
+        difs[i] = ints[i] - ints[i - 1];
     }
     return difs;
 }
 
-void spec_decodeer(const char* filename, const char* output_filename);
-char* spec_read_text(FILE *fp);
-char* spec_decode_text(char* text);
-void spec_write_text(char* decoded_text, const char* output_file);
+//void spec_decodeer(const char* filename, const char* output_filename);
+//char* spec_read_text(FILE *fp);
+//char* spec_decode_text(char* text);
+//void spec_write_text(char* decoded_text, const char* output_file);

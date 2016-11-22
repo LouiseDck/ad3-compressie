@@ -6,10 +6,10 @@
 #ifndef COMPRESSIE_COMPRIMEER2_H
 #define COMPRESSIE_COMPRIMEER2_H
 
-long long int* spec_read_file(const char* filename, size_t* number);
+long long int* spec_read_file(const char* filename, unsigned int* number);
 void spec_encodeer(const char* filename, const char* output_file);
-long long int* text_split(char* text, const char delimiter, size_t* number);
-long long int* calculate_differences(long long* ints, size_t number);
+long long int* text_split(char* text, const char delimiter, unsigned int* number);
+long long int* calculate_differences(long long* ints, unsigned int number);
 
 void spec_decodeer(const char* filename, const char* output_filename);
 char* spec_read_text(FILE *fp);
