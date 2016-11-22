@@ -157,7 +157,11 @@ void spec_decodeer(const char* filename, const char* output_filename){
 
     unsigned char* encoded_text = calloc(sizeof(unsigned char), number + 1);
     spec_read_text(fp, number, encoded_text);
-    spec_decode_text(encoded_text, number);
+
+    long long* decoded_longs = calloc(sizeof(long long), number);
+    spec_decode_text(encoded_text, number, decoded_longs);
+
+
 
     fclose(fp);
 }
@@ -183,19 +187,22 @@ int read_size_bits(unsigned char* text, int* byte_index, int* bit_index){
     return cur_sum;
 }
 
-int read_long_bits(char* text, int* byte_index, int* bit_index){
-
+long long read_long_bits(unsigned char* text, int* byte_index, int* bit_index, int size){
+    long long cur_sum = 0;
+    for(int i = 0; i < size; i++){
+        cur_sum += (1 >> size) * read_bit(text, byte_index, bit_index);
+    }
+    return cur_sum;
 }
 
-char* spec_decode_text(unsigned char* text, unsigned int number){
-    // lees 6 bits in voor u size
+long long* spec_decode_text(unsigned char* text, unsigned int number, long long* decoded_longs){
+
     int byte_index = 0;
     int bit_index = 0;
     for(int i = 0; i < number; i++){
         int size = read_size_bits(text, &byte_index, &bit_index);
-        long long = read_long_bits(text, &byte_index, &bit_index);
+        long long current = read_long_bits(text, &byte_index, &bit_index, int size);
     }
-    // lees size aantal bits in voor tekst
 }
 void spec_write_text(char* decoded_text, const char* output_file){
 

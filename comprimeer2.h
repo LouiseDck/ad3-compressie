@@ -13,7 +13,7 @@ long long int* calculate_differences(long long* ints, unsigned int number);
 
 void spec_decodeer(const char* filename, const char* output_filename);
 unsigned char* spec_read_text(FILE *fp, unsigned int number, unsigned char* encoded_text);
-char* spec_decode_text(unsigned char* text, unsigned int number);
+long long* spec_decode_text(unsigned char* text, unsigned int number, long long* decoded_longs);
 void spec_write_text(char* decoded_text, const char* output_file);
 
 #endif //COMPRESSIE_COMPRIMEER2_H
