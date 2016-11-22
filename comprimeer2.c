@@ -150,7 +150,53 @@ long long* calculate_differences(long long* ints, unsigned int number){
     return difs;
 }
 
-//void spec_decodeer(const char* filename, const char* output_filename);
-//char* spec_read_text(FILE *fp);
-//char* spec_decode_text(char* text);
-//void spec_write_text(char* decoded_text, const char* output_file);
+void spec_decodeer(const char* filename, const char* output_filename){
+    FILE* fp = fopen(filename, "rb");
+    unsigned int number;
+    fread(&number, sizeof(int), 1, fp);
+
+    unsigned char* encoded_text = calloc(sizeof(unsigned char), number + 1);
+    spec_read_text(fp, number, encoded_text);
+    spec_decode_text(encoded_text, number);
+
+    fclose(fp);
+}
+unsigned char* spec_read_text(FILE *fp, unsigned int number, unsigned char* encoded_text){
+    fread(encoded_text, sizeof(unsigned char), number, fp);
+    encoded_text[number] = '\0';
+    return encoded_text;
+}
+
+int read_bit(unsigned char* text, int* byte_index, int* bit_index){
+
+}
+
+int read_size_bits(unsigned char* text, int* byte_index, int* bit_index){
+    char cur_sum = 0;
+    cur_sum += 32 * read_bit(text, byte_index, bit_index);
+    cur_sum += 16 * read_bit(text, byte_index, bit_index);
+    cur_sum += 8 * read_bit(text, byte_index, bit_index);
+    cur_sum += 4 * read_bit(text, byte_index, bit_index);
+    cur_sum += 2 * read_bit(text, byte_index, bit_index);
+    cur_sum += 1 * read_bit(text, byte_index, bit_index);
+
+    return cur_sum;
+}
+
+int read_long_bits(char* text, int* byte_index, int* bit_index){
+
+}
+
+char* spec_decode_text(unsigned char* text, unsigned int number){
+    // lees 6 bits in voor u size
+    int byte_index = 0;
+    int bit_index = 0;
+    for(int i = 0; i < number; i++){
+        int size = read_size_bits(text, &byte_index, &bit_index);
+        long long = read_long_bits(text, &byte_index, &bit_index);
+    }
+    // lees size aantal bits in voor tekst
+}
+void spec_write_text(char* decoded_text, const char* output_file){
+
+}
