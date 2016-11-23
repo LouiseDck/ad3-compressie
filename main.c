@@ -6,10 +6,10 @@ int main(int argc, char *argv[]) {
     char* inputfile = argv[2];
     char* outputfile = argv[3];
     if(strcmp(argv[1], "-d") == 0){
-        spec_decodeer(inputfile, outputfile);
+        decodeer(inputfile, outputfile);
 
     } else if(strcmp(argv[1], "-c") == 0){
-        spec_encodeer(inputfile, outputfile);
+        encodeer(read_file(inputfile), outputfile);
     }
 
     return 0;
