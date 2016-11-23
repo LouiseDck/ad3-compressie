@@ -46,11 +46,12 @@ void encodeer(char* text, const char* filename) {
 
     // schrijf de codes uit
 
+    FILE *outfp = fopen(filename, "a+b");
     char to_encode[(number_of_chars_to_write * 8) + 1];
-    for(int i = current_size; i < number_of_chars_to_write * 8 + 1; i++){
+    strncpy(to_encode, complete_code, (size_t) number_of_chars_to_write * 8);
+    for(int i = current_size - 1; i < number_of_chars_to_write * 8 + 1; i++){
         to_encode[i] = 48;
     }
-    strncpy(to_encode, complete_code, (size_t) number_of_chars_to_write * 8);
     int already_written = 0;
     for(int temp = 0; temp < number_of_chars_to_write; temp++){
         unsigned char bits;
@@ -65,16 +66,12 @@ void encodeer(char* text, const char* filename) {
         cur_sum += 2 * (to_encode[6 + already_written] - '0');
         cur_sum += 1 * (to_encode[7 + already_written] - '0');
 
-        FILE *fp = fopen(filename, "a+b");
-        if(fp != NULL) {
-            fwrite(&cur_sum, sizeof(char), 1, fp);
-        }
-        fclose(fp);
+        fwrite(&cur_sum, sizeof(char), 1, outfp);
         already_written +=8;
-        int iets = 0;
-    }
 
-    int ding = 0;
+    }
+    fclose(outfp);
+
 }
 
 List* make_freq_list(char* text, int* number_not_zero){
@@ -294,7 +291,11 @@ char* decode_text(char* text, Leaf* leaf, int aantal){
             incomplete = 0;
         }
     }
-    decoded_text[nr_decoded] = "\0";
+    for(int i = 0; i < aantal; i++){
+        printf("%c\n", decoded_text[i]);
+    }
+
+    //decoded_text[nr_decoded] = "\0";
     return decoded_text;
 }
 void write_text(char* decoded_text, const char* output_file){
