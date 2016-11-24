@@ -10,7 +10,7 @@
 
 char* read_file(const char* filename);
 
-void encodeer(char *text, const char* filename);
+void encodeer(const char *filename, const char* outputfilename);
 List* make_freq_list(char* text, int* number_not_zero);
 encode_Item* make_encoding_huffman_tree(encode_Item* encode_array, List* list);
 char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, int* cur_size, char** code);

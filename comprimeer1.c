@@ -7,70 +7,82 @@
 #include <memory.h>
 #include "comprimeer1.h"
 
-#define BUFSIZE 1023
+#define BUFSIZE 1024
 
-char* read_file(const char* filename){
-    char *text = calloc(BUFSIZE + 1, sizeof(char));
-    FILE *fp = fopen(filename, "r");
-    if(fp != NULL){
-        size_t size = fread(text, sizeof(char), BUFSIZE, fp);
-        text[size] = '\0';
+int fpeek_2(FILE* fp) {
+    int c = getc(fp);
+    if(c == EOF){
+        return EOF;
     }
-    fclose(fp);
-    return text;
+    ungetc(c, fp);
+    return 0;
 }
 
-void encodeer(char* text, const char* filename) {
-    int number_not_zero = strlen(text);
-    int iets = 0;
-    List* list = make_freq_list(text, &iets);
-    int aantal_char = list->number_of_items;
-    struct encode_Item encode_array[aantal_char];
-    encode_Item* item = make_encoding_huffman_tree(encode_array, list);
-    int current_size = 0;
-    char* complete = calloc(sizeof(char), 256);
-    char* complete_code = encode_text(number_not_zero, text, encode_array, &current_size, &complete);
+void encodeer(const char* inputfilename, const char* outputfilename) {
+    FILE* clear = fopen(outputfilename, "w");
+    fclose(clear);
+    size_t size = BUFSIZE;
 
-    int textlength = (int) strlen(text);
-    int number_of_chars_to_write = (current_size + 8 - 1)/8;
+    FILE *fp = fopen(inputfilename, "r");
 
-    FILE *fp = fopen(filename, "wb");
-    if(fp != NULL) {
-        fwrite(&textlength, 4, 1, fp);
-        fwrite(&number_of_chars_to_write, 4, 1, fp);
+    while(!fpeek_2(fp)) {
+        char *text = calloc(BUFSIZE + 1, sizeof(char));
+        size = fread(text, sizeof(char), BUFSIZE, fp);
+        text[size] = '\0';
+
+        int number_not_zero = strlen(text);
+        int iets = 0;
+        List *list = make_freq_list(text, &iets);
+        int aantal_char = list->number_of_items;
+        struct encode_Item encode_array[aantal_char];
+        encode_Item *item = make_encoding_huffman_tree(encode_array, list);
+        int current_size = 0;
+        char *complete = calloc(sizeof(char), 256);
+        char *complete_code = encode_text(number_not_zero, text, encode_array, &current_size, &complete);
+
+        int textlength = (int) strlen(text);
+        int number_of_chars_to_write = (current_size + 8 - 1) / 8;
+
+        FILE *ofp = fopen(outputfilename, "a+b");
+        if (fp != NULL) {
+            fwrite(&textlength, 4, 1, ofp);
+            fwrite(&number_of_chars_to_write, 4, 1, ofp);
+        }
+        fclose(ofp);
+
+        char *buffer = (char *) calloc(1, sizeof(char));
+        write_tree(outputfilename, list->firstitem->leaf, buffer);
+
+        // schrijf de codes uit
+
+        FILE *outfp = fopen(outputfilename, "a+b");
+        char to_encode[(number_of_chars_to_write * 8) + 1];
+        strncpy(to_encode, complete_code, (size_t) number_of_chars_to_write * 8);
+        for (int i = current_size; i < number_of_chars_to_write * 8 + 1; i++) {
+            to_encode[i] = 48;
+        }
+
+        int already_written = 0;
+        for (int temp = 0; temp < number_of_chars_to_write; temp++) {
+            unsigned char bits;
+            //add up the numbers of the char
+            int cur_sum = 0;
+            cur_sum += 128 * (to_encode[0 + already_written] - '0');
+            cur_sum += 64 * (to_encode[1 + already_written] - '0');
+            cur_sum += 32 * (to_encode[2 + already_written] - '0');
+            cur_sum += 16 * (to_encode[3 + already_written] - '0');
+            cur_sum += 8 * (to_encode[4 + already_written] - '0');
+            cur_sum += 4 * (to_encode[5 + already_written] - '0');
+            cur_sum += 2 * (to_encode[6 + already_written] - '0');
+            cur_sum += 1 * (to_encode[7 + already_written] - '0');
+
+            fwrite(&cur_sum, sizeof(char), 1, outfp);
+            already_written += 8;
+
+        }
+        fclose(outfp);
     }
     fclose(fp);
-
-    char* buffer = (char*) calloc(1, sizeof(char));
-    write_tree(filename, list->firstitem->leaf, buffer);
-
-    // schrijf de codes uit
-
-    FILE *outfp = fopen(filename, "a+b");
-    char to_encode[(number_of_chars_to_write * 8) + 1];
-    strncpy(to_encode, complete_code, (size_t) number_of_chars_to_write * 8);
-    for(int i = current_size - 1; i < number_of_chars_to_write * 8 + 1; i++){
-        to_encode[i] = 48;
-    }
-    int already_written = 0;
-    for(int temp = 0; temp < number_of_chars_to_write; temp++){
-        unsigned char bits;
-        //add up the numbers of the char
-        int cur_sum = 0;
-        cur_sum += 128 * (to_encode[0 + already_written] - '0');
-        cur_sum += 64 * (to_encode[1 + already_written] - '0');
-        cur_sum += 32 * (to_encode[2 + already_written] - '0');
-        cur_sum += 16 * (to_encode[3 + already_written] - '0');
-        cur_sum += 8 * (to_encode[4 + already_written] - '0');
-        cur_sum += 4 * (to_encode[5 + already_written] - '0');
-        cur_sum += 2 * (to_encode[6 + already_written] - '0');
-        cur_sum += 1 * (to_encode[7 + already_written] - '0');
-
-        fwrite(&cur_sum, sizeof(char), 1, outfp);
-        already_written +=8;
-
-    }
-    fclose(outfp);
 
 }
 
@@ -137,7 +149,7 @@ char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, 
         encode_Item current_item = encode_array[j];
         Leaf* current_leaf = current_item.code;
 
-        int iterations = 255 * 255;
+        int iterations = 255;
         while(current_leaf->parent != NULL){
             if(current_leaf->zero_or_one_child == 0){
                 code[iterations] = 48;
@@ -147,24 +159,20 @@ char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, 
             current_leaf = current_leaf->parent;
             iterations--;
         }
-        current_size += ((255*255)-iterations);
-        *complete_code = (char*) realloc(*complete_code, (current_size-1) * sizeof(int));
-        int end_code = iterations + 1;
-        for(int k = current_size - ((255*255)-iterations); k < current_size; k++){
-            int ding = code[end_code];
-            (*complete_code)[k] = code[end_code];
-            end_code++;
-        }
+        current_size += (255-iterations);
+        *complete_code = (char*) realloc(*complete_code, (current_size) * sizeof(int));
+        //if(*complete_code) {
+            int end_code = iterations + 1;
+            for (int k = current_size - ((255) - iterations); k < current_size; k++) {
+                int ding = code[end_code];
+                (*complete_code)[k] = code[end_code];
+                end_code++;
+            }
+        //}
     }
     (*complete_code)[current_size] = '\0';
     *cur_siz = current_size;
     return *complete_code;
-}
-
-void printbuffer(int* bitnr, char* buffer){
-    for(int i = 0; i < *bitnr; i++){
-        printf("%i: %c \n", i, buffer[i]);
-    }
 }
 
 void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
@@ -175,7 +183,6 @@ void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
         *buffersize += sizeof(char);
         (*buffer)[*bitnr] = 48;
         (*bitnr)++;
-        //printbuffer(bitnr, buffer);
         encode_nodes(leaf->zero_child, buffer, bitnr, buffersize);
         encode_nodes(leaf->one_child, buffer, bitnr, buffersize);
     } else{
@@ -184,7 +191,6 @@ void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
         (*buffer)[*bitnr] = 49;
         (*buffer)[*bitnr + 1] = leaf->character;
         (*bitnr) += 2;
-        printbuffer(bitnr, *buffer);
     }
 }
 //Kan eventueel beter door de 0'en en 1'en met 1 bit uit te schrijven ipv 8 bits
@@ -192,7 +198,6 @@ void write_tree(const char* filename, Leaf* parent_leaf, char* buffer){
     int buffersize = sizeof(char);
     int bitnr = 0;
     encode_nodes(parent_leaf, &buffer, &bitnr, &buffersize);
-    printbuffer(&bitnr, buffer);
     FILE *fp = fopen(filename, "a+b");
     if(fp != NULL) {
         fwrite(&bitnr, sizeof(char), 1, fp);
@@ -204,40 +209,44 @@ void write_tree(const char* filename, Leaf* parent_leaf, char* buffer){
 void write_encoded_text(){}
 
 void decodeer(const char* filename, const char* output_filename){
+    FILE* clear = fopen(output_filename, "w");
+    fclose(clear);
     int size_tree = 0;
-    FILE *fp = fopen(filename, "rb");
+    FILE *fp = fopen(filename, "r");
 
     if(fp != NULL) {
-        int aantal = 0;
-        int aantalchar = 0;
-        fread(&aantal, sizeof(int), 1, fp);
-        fread(&aantalchar, 4, 1, fp);
-        Leaf *parent = read_huffman_tree(fp);
-        char* text = calloc(BUFSIZE + 1, sizeof(char));
-        fread(text, sizeof(char), (size_t) aantalchar, fp);
-        char* decoded = decode_text(text, parent, aantal);
-        write_text(decoded, output_filename);
+        while(!fpeek_2(fp)) {
+            int aantal = 0;
+            int aantalchar = 0;
+            fread(&aantal, sizeof(int), 1, fp);
+            fread(&aantalchar, 4, 1, fp);
+            Leaf *parent = read_huffman_tree(fp);
+            char *text = calloc(BUFSIZE + 1, sizeof(char));
+            fread(text, sizeof(char), (size_t) aantalchar, fp);
+            char *decoded = decode_text(text, parent, aantal);
+            write_text(decoded, output_filename);
+        }
     }
     fclose(fp);
 }
 
-static size_t place = 0;
-char readbyte(char* text, size_t max){
-    if(place >= max){
+
+char readbyte(char* text, size_t max, size_t* place){
+    if(*place >= max){
         return 0;
     }
-    char cur = text[place];
-    place++;
+    char cur = text[*place];
+    (*place)++;
     return cur;
 }
 
-Leaf* decode_tree(char* text, size_t max){
-    char current = readbyte(text, max);
+Leaf* decode_tree(char* text, size_t max, size_t* place){
+    char current = readbyte(text, max, place);
     if(current == 49){
-        return make_only_leaf(NULL, NULL, readbyte(text, max), 2);
+        return make_only_leaf(NULL, NULL, readbyte(text, max, place), 2);
     } else{
-        Leaf* zerochild = decode_tree(text, max);
-        Leaf* onechild = decode_tree(text,max);
+        Leaf* zerochild = decode_tree(text, max, place);
+        Leaf* onechild = decode_tree(text,max, place);
         return make_only_leaf(zerochild, onechild, 0, 2);
     }
 }
@@ -252,10 +261,9 @@ Leaf* read_huffman_tree(FILE *fp){
 
     Leaf *root_leaf = make_only_leaf(NULL, NULL, 0, 2);
     size_t index = 0;
-    Leaf* test = decode_tree(text, (size_t) size_tree);
+    Leaf* test = decode_tree(text, (size_t) size_tree, &index);
 }
 
-char* read_text(FILE *fp);
 char* decode_text(char* text, Leaf* leaf, int aantal){
     char* decoded_text = (char*) calloc(sizeof(char),(size_t) aantal + 1);
     int incomplete = 1;
@@ -272,7 +280,7 @@ char* decode_text(char* text, Leaf* leaf, int aantal){
             unsigned int cur_bit = cur_byte >> shift;
             if (cur_bit == 1) {
                 cur_leaf = cur_leaf->one_child;
-            } else {
+            } else if(cur_bit == 0){
                 cur_leaf = cur_leaf->zero_child;
             }
             if(shift != 0){
@@ -291,15 +299,10 @@ char* decode_text(char* text, Leaf* leaf, int aantal){
             incomplete = 0;
         }
     }
-    for(int i = 0; i < aantal; i++){
-        printf("%c\n", decoded_text[i]);
-    }
-
-    //decoded_text[nr_decoded] = "\0";
     return decoded_text;
 }
 void write_text(char* decoded_text, const char* output_file){
-    FILE *fp = fopen(output_file, "wb");
+    FILE *fp = fopen(output_file, "a+b");
 
     if(fp != NULL) {
         fwrite(decoded_text, sizeof(char), strlen(decoded_text), fp);

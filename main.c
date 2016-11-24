@@ -9,7 +9,7 @@ int main(int argc, char *argv[]) {
         decodeer(inputfile, outputfile);
 
     } else if(strcmp(argv[1], "-c") == 0){
-        encodeer(read_file(inputfile), outputfile);
+        encodeer(inputfile, outputfile);
     }
 
     return 0;
