@@ -9,40 +9,58 @@
 
 #define BUFSIZE 1024
 
-int fpeek_2(FILE* fp) {
-    int c = getc(fp);
-    if(c == EOF){
-        return EOF;
+int main(int argc, char *argv[]) {
+    char* inputfile = argv[2];
+    char* outputfile = argv[3];
+    if(strcmp(argv[1], "-d") == 0){
+        decodeer(inputfile, outputfile);
+
+    } else if(strcmp(argv[1], "-c") == 0){
+        encodeer(inputfile, outputfile);
     }
+
+    return 0;
+}
+
+int fpeek(FILE* fp) {
+    int c = getc(fp);
+    if(c == EOF) return EOF;
     ungetc(c, fp);
     return 0;
 }
 
 void encodeer(const char* inputfilename, const char* outputfilename) {
+    //Zorgt ervoor dat de outputfile leeg is, want in de rest van de code wordt geappend aan deze file.
     FILE* clear = fopen(outputfilename, "w");
     fclose(clear);
-    size_t size = BUFSIZE;
 
     FILE *fp = fopen(inputfilename, "r");
-
-    while(!fpeek_2(fp)) {
+    // Zolang er nog een int in de file is.
+    while(!fpeek(fp)) {
+        //Plaats voorzien voor de in te lezen niet gecomprimeerde tekst.
         char *text = calloc(BUFSIZE + 1, sizeof(char));
-        size = fread(text, sizeof(char), BUFSIZE, fp);
+        size_t size = fread(text, sizeof(char), BUFSIZE, fp);
         text[size] = '\0';
 
-        int number_not_zero = strlen(text);
-        int iets = 0;
-        List *list = make_freq_list(text, &iets);
+        //Opbouwen lijst met frequenties van de voorgekomen karakters
+        List *list = make_freq_list(text);
+
+        // De huffman boom wordt opgesteld, samen met een array van de bladeren om gemakkelijker te kunnen zoeken.
         int aantal_char = list->number_of_items;
         struct encode_Item encode_array[aantal_char];
-        encode_Item *item = make_encoding_huffman_tree(encode_array, list);
+        make_encoding_huffman_tree(encode_array, list);
+
+        // Het effectieve encoderen van de tekst aan de hand van de boom en de array van bladeren
+        int textlength = (int) strlen(text);
         int current_size = 0;
         char *complete = calloc(sizeof(char), 256);
-        char *complete_code = encode_text(number_not_zero, text, encode_array, &current_size, &complete);
+        char *complete_code = encode_text(textlength, text, encode_array, &current_size, &complete);
 
-        int textlength = (int) strlen(text);
-        int number_of_chars_to_write = (current_size + 8 - 1) / 8;
+        // het aantal nodige bytes is current_size/8 naar boven afgerond
+        int number_of_chars_to_write = (current_size + 7) / 8;
 
+        // om gemakkelijk te kunnen decoderen wordt het aantal originele gedecodeerde karakters gecodeerd,
+        // net als het aantal geschreven bytes.
         FILE *ofp = fopen(outputfilename, "a+b");
         if (fp != NULL) {
             fwrite(&textlength, 4, 1, ofp);
@@ -50,22 +68,24 @@ void encodeer(const char* inputfilename, const char* outputfilename) {
         }
         fclose(ofp);
 
+        // Nu wordt de huffman boom uitgeschreven
         char *buffer = (char *) calloc(1, sizeof(char));
         write_tree(outputfilename, list->firstitem->leaf, buffer);
 
-        // schrijf de codes uit
 
         FILE *outfp = fopen(outputfilename, "a+b");
         char to_encode[(number_of_chars_to_write * 8) + 1];
         strncpy(to_encode, complete_code, (size_t) number_of_chars_to_write * 8);
+        // zorgt ervoor dat, indien het aantal uit te schrijven bits geen veelvoud van 8 is,
+        // dat de uitgeschreven byte nog steeds correct is door de overblijvende bits op 0 te zetten.
         for (int i = current_size; i < number_of_chars_to_write * 8 + 1; i++) {
             to_encode[i] = 48;
         }
 
+        // Samenstellen van de uit te schrijven byte & het uitschrijven
         int already_written = 0;
         for (int temp = 0; temp < number_of_chars_to_write; temp++) {
-            unsigned char bits;
-            //add up the numbers of the char
+
             int cur_sum = 0;
             cur_sum += 128 * (to_encode[0 + already_written] - '0');
             cur_sum += 64 * (to_encode[1 + already_written] - '0');
@@ -86,26 +106,28 @@ void encodeer(const char* inputfilename, const char* outputfilename) {
 
 }
 
-List* make_freq_list(char* text, int* number_not_zero){
+/* Er wordt een lijst opgesteld geordend op frequenties van het voorkomen van een karakter */
+List* make_freq_list(char* text){
+    // 256, aangezien dit alle mogelijke karakters zijn.
     int freq[256] = {0};
 
     for (int i = 0; i < BUFSIZE; i++) {
         char character = text[i];
         freq[character] = freq[character] + 1;
-        if(character) (*number_not_zero)++;
     }
 
-    //maak huffman boompje
     List* list = new_list();
     for(int i = 0; i < 256; i++){
         if(freq[i] != 0 && i != NULL){
-            Item* item = new_item(freq[i], (char) i, NULL);
+            Item* item = new_item(freq[i], (unsigned char) i, NULL);
             add_element_freq(list, item);
         }
     }
     return list;
 }
-encode_Item* make_encoding_huffman_tree(encode_Item* encode_array, List* list){
+
+/* Er wordt een array die wijst naar de juiste toppen opgesteld, samen met de eigenlijke boom. */
+void make_encoding_huffman_tree(encode_Item* encode_array, List* list){
 
     Item* current = list->firstitem;
     int where_encode_insert = 0;
@@ -134,14 +156,15 @@ encode_Item* make_encoding_huffman_tree(encode_Item* encode_array, List* list){
         remove_element(list, 0);
         remove_element(list, 0);
     }
-    return list->firstitem;
 }
+
+/* Methode die de originele tekst omzet in huffmancodes */
 char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, int* cur_siz, char** complete_code){
     int current_size = *cur_siz;
-    //vind de nodes die je wilt
     for(int i = 0; i < aantal_char; i++){
         char current_char  = text[i];
-        char code[255 * 255];
+        char code[255];
+        // het juiste item in de lijst met pointers naar de juiste toppen wordt gezocht.
         int j = 0;
         while(current_char != encode_array[j].data){
             j++;
@@ -149,6 +172,8 @@ char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, 
         encode_Item current_item = encode_array[j];
         Leaf* current_leaf = current_item.code;
 
+        // De code wordt in de tijdelijke code char array gestopt. Dit is in de omgekeerde volgorde dan ze
+        // gebruikt moet worden
         int iterations = 255;
         while(current_leaf->parent != NULL){
             if(current_leaf->zero_or_one_child == 0){
@@ -159,22 +184,24 @@ char* encode_text(int aantal_char, const char* text, encode_Item* encode_array, 
             current_leaf = current_leaf->parent;
             iterations--;
         }
+        // Hier wordt de  code omgedraaid zodat deze klaar is voor uitschrijven.
         current_size += (255-iterations);
         *complete_code = (char*) realloc(*complete_code, (current_size) * sizeof(int));
-        //if(*complete_code) {
-            int end_code = iterations + 1;
-            for (int k = current_size - ((255) - iterations); k < current_size; k++) {
-                int ding = code[end_code];
-                (*complete_code)[k] = code[end_code];
-                end_code++;
-            }
-        //}
+
+        int end_code = iterations + 1;
+        for (int k = current_size - ((255) - iterations); k < current_size; k++) {
+            (*complete_code)[k] = code[end_code];
+            end_code++;
+        }
     }
     (*complete_code)[current_size] = '\0';
     *cur_siz = current_size;
     return *complete_code;
 }
 
+// Methode die recursief de huffman boom in bytes codeert om in de file mee te geven.
+// Dit kan efficienter geimplementeerd worden door in plaats van een 1 en een 0 als byte weg te schrijven
+// een 1 of 0 bit weg te schrijven.
 void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
     // geen blad -> schrijf 0 naar buffer & resize
     // schrijf kinderen ook weg
@@ -185,7 +212,7 @@ void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
         (*bitnr)++;
         encode_nodes(leaf->zero_child, buffer, bitnr, buffersize);
         encode_nodes(leaf->one_child, buffer, bitnr, buffersize);
-    } else{
+    } else{ //Wel een blad -> schrijf een 1 en het karakter zelf weg naar buffer en resize eerst om plaats te maken
         *buffer = realloc(*buffer, *buffersize + (2*sizeof(char)));
         *buffersize += (2*sizeof(char));
         (*buffer)[*bitnr] = 49;
@@ -193,7 +220,8 @@ void encode_nodes(Leaf* leaf, char** buffer, int *bitnr, int *buffersize){
         (*bitnr) += 2;
     }
 }
-//Kan eventueel beter door de 0'en en 1'en met 1 bit uit te schrijven ipv 8 bits
+
+//Methode die de boom wegschrijft na het encoderen
 void write_tree(const char* filename, Leaf* parent_leaf, char* buffer){
     int buffersize = sizeof(char);
     int bitnr = 0;
@@ -201,36 +229,41 @@ void write_tree(const char* filename, Leaf* parent_leaf, char* buffer){
     FILE *fp = fopen(filename, "a+b");
     if(fp != NULL) {
         fwrite(&bitnr, sizeof(char), 1, fp);
-        fwrite(buffer, sizeof(char), bitnr, fp);
+        fwrite(buffer, sizeof(char), (size_t) bitnr, fp);
     }
     fclose(fp);
 }
 
-void write_encoded_text(){}
-
+/* Zorgt voor het decoderen van het gecomprimeerde bestand */
 void decodeer(const char* filename, const char* output_filename){
+    // Zorgt ervoor dat het output bestand leeg is aangezien er telkens wordt geappend aan dit bestand
     FILE* clear = fopen(output_filename, "w");
     fclose(clear);
-    int size_tree = 0;
-    FILE *fp = fopen(filename, "r");
 
+    FILE *fp = fopen(filename, "r");
     if(fp != NULL) {
-        while(!fpeek_2(fp)) {
+        while(!fpeek(fp)) {
+            // Leest in hoeveel karakters het originele deel van dit bestand bevatte en hoeveel karakters nodig
+            // waren voor het encoderen hiervan.
             int aantal = 0;
             int aantalchar = 0;
-            fread(&aantal, sizeof(int), 1, fp);
+            fread(&aantal, 4, 1, fp);
             fread(&aantalchar, 4, 1, fp);
+
+            // De huffmanboom wordt ingelezen & oppnieuw opgebouwd
             Leaf *parent = read_huffman_tree(fp);
-            char *text = calloc(BUFSIZE + 1, sizeof(char));
+            unsigned char *text = calloc((size_t) aantalchar + 1, sizeof(char));
             fread(text, sizeof(char), (size_t) aantalchar, fp);
-            char *decoded = decode_text(text, parent, aantal);
+            // De tekst wordt gedecodeerd
+            unsigned char *decoded = decode_text(text, parent, aantal);
+            // De gedecodeerde tekst wordt uitgeschreven
             write_text(decoded, output_filename);
         }
     }
     fclose(fp);
 }
 
-
+/* Hulpfunctie die telkens uit de tekst de volgende byte haalt */
 char readbyte(char* text, size_t max, size_t* place){
     if(*place >= max){
         return 0;
@@ -240,6 +273,7 @@ char readbyte(char* text, size_t max, size_t* place){
     return cur;
 }
 
+/* De boom wordt gedecodeerd en opnieuw opgebouwd */
 Leaf* decode_tree(char* text, size_t max, size_t* place){
     char current = readbyte(text, max, place);
     if(current == 49){
@@ -251,6 +285,7 @@ Leaf* decode_tree(char* text, size_t max, size_t* place){
     }
 }
 
+/* De tekst nodig om de huffman boom opnieuw op te bouwen wordt ingelezen */
 Leaf* read_huffman_tree(FILE *fp){
     char *text;
     char size_tree = 0;
@@ -259,20 +294,20 @@ Leaf* read_huffman_tree(FILE *fp){
     size_t size = fread(text, sizeof(char), (size_t) size_tree, fp);
     text[size] = '\0';
 
-    Leaf *root_leaf = make_only_leaf(NULL, NULL, 0, 2);
+    make_only_leaf(NULL, NULL, 0, 2);
     size_t index = 0;
-    Leaf* test = decode_tree(text, (size_t) size_tree, &index);
+    return decode_tree(text, (size_t) size_tree, &index);
 }
 
-char* decode_text(char* text, Leaf* leaf, int aantal){
-    char* decoded_text = (char*) calloc(sizeof(char),(size_t) aantal + 1);
-    int incomplete = 1;
+/* De tekst wordt gedecodeerd aan de hand van de opnieuw opgebouwde huffmanboom */
+unsigned char* decode_text(unsigned char* text, Leaf* leaf, int aantal){
+    unsigned char* decoded_text = (unsigned char*) calloc(sizeof(char),(size_t) aantal + 1);
     Leaf* cur_leaf = leaf;
     int nr_decoded = 0;
     int nr_char = 0;
     size_t shift = 7;
     unsigned char mask = 255;
-    while(incomplete){
+    while(nr_decoded!=aantal){
         while(!cur_leaf->character) {
             //decode 1 teken
             unsigned char cur_char = text[nr_char];
@@ -283,6 +318,7 @@ char* decode_text(char* text, Leaf* leaf, int aantal){
             } else if(cur_bit == 0){
                 cur_leaf = cur_leaf->zero_child;
             }
+            // De mask en shift en nr_char waardes worden aangepast indien nodig
             if(shift != 0){
                 shift--;
                 mask = mask >> 1;
@@ -295,17 +331,16 @@ char* decode_text(char* text, Leaf* leaf, int aantal){
         decoded_text[nr_decoded] = cur_leaf->character;
         nr_decoded++;
         cur_leaf = leaf;
-        if(nr_decoded==aantal){
-            incomplete = 0;
-        }
     }
     return decoded_text;
 }
-void write_text(char* decoded_text, const char* output_file){
+
+/* De gedecodeerde tekst wordt opnieuw uitgeschreven */
+void write_text(unsigned char* decoded_text, const char* output_file){
     FILE *fp = fopen(output_file, "a+b");
 
     if(fp != NULL) {
-        fwrite(decoded_text, sizeof(char), strlen(decoded_text), fp);
+        fwrite(decoded_text, sizeof(unsigned char), strlen(decoded_text), fp);
     }
     fclose(fp);
 }

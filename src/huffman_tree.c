@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include "huffman_tree.h"
 
-Leaf* make_leaf(Leaf* zero_child, Leaf* one_child, char character, int freq, int zero_or_one, encode_Item encode_array[], int where){
+Leaf* make_leaf(Leaf* zero_child, Leaf* one_child, unsigned char character, int freq, int zero_or_one, encode_Item encode_array[], int where){
     Leaf* new_leaf = calloc(1, sizeof(Leaf));
 
     new_leaf->one_child = one_child;
@@ -23,7 +23,7 @@ Leaf* make_leaf(Leaf* zero_child, Leaf* one_child, char character, int freq, int
     return new_leaf;
 }
 
-Leaf* make_only_leaf(Leaf* zero_child, Leaf* one_child, char character, int zero_or_one){
+Leaf* make_only_leaf(Leaf* zero_child, Leaf* one_child, unsigned char character, int zero_or_one){
     Leaf* new_leaf = calloc(1, sizeof(Leaf));
 
     new_leaf->one_child = one_child;
@@ -38,7 +38,7 @@ Leaf* make_only_leaf(Leaf* zero_child, Leaf* one_child, char character, int zero
     return new_leaf;
 }
 
-encode_Item* make_encode_Item(char data, Leaf* code){
+encode_Item* make_encode_Item(unsigned char data, Leaf* code){
     encode_Item* item = calloc(1, sizeof(encode_Item));
     item->data = data;
     item->code = code;

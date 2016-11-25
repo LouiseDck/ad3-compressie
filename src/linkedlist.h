@@ -8,7 +8,7 @@
 #include "huffman_tree.h"
 
 typedef struct Item{
-    char data;
+    unsigned char data;
     Leaf* leaf;
     int freq;
     struct Item* volgend;
@@ -16,13 +16,12 @@ typedef struct Item{
 
 typedef struct List{
     Item* firstitem;
-    Item* lastitem;
     int number_of_items;
 } List;
 
 List* new_list();
 
-Item* new_item(int freq, char data, Item* volgend);
+Item* new_item(int freq, unsigned char data, Item* volgend);
 
 Item* new_leaf_item(Leaf* leaf);
 
