@@ -1,1 +1,3 @@
-comprimeer1: main.c comprimeer1.c huffman_tree.c linkedlist.c
+comprimeer1: comprimeer1.c huffman_tree.c linkedlist.c
+comprimeer2: comprimeer2.c
+
