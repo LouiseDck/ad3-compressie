@@ -29,4 +29,6 @@ void add_element_freq(List* list, Item* item);
 
 void remove_element(List* list, int pos);
 
+void remove_list(List* list);
+
 #endif //COMPRESSIE_LINKEDLIST_H

@@ -44,3 +44,15 @@ encode_Item* make_encode_Item(unsigned char data, Leaf* code){
     item->code = code;
     return item;
 }
+
+void free_tree(Leaf* parent){
+    free_leaf(parent);
+}
+
+void free_leaf(Leaf* leaf){
+    if(leaf->zero_child || leaf->one_child){
+        free_leaf(leaf->zero_child);
+        free_leaf(leaf->one_child);
+    }
+    free(leaf);
+}

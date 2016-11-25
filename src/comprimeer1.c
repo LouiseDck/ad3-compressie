@@ -98,9 +98,13 @@ void encodeer(const char* inputfilename, const char* outputfilename) {
 
             fwrite(&cur_sum, sizeof(char), 1, outfp);
             already_written += 8;
-
         }
         fclose(outfp);
+        free_tree(list->firstitem->leaf);
+        remove_list(list);
+        free(text);
+        free(complete);
+        free(buffer);
     }
     fclose(fp);
 
@@ -258,23 +262,27 @@ void decodeer(const char* filename, const char* output_filename){
             unsigned char *decoded = decode_text(text, parent, aantal);
             // De gedecodeerde tekst wordt uitgeschreven
             write_text(decoded, output_filename);
+
+            free_tree(parent);
+            free(text);
+            free(decoded);
         }
     }
     fclose(fp);
 }
 
 /* Hulpfunctie die telkens uit de tekst de volgende byte haalt */
-char readbyte(char* text, size_t max, size_t* place){
+unsigned char readbyte(unsigned char* text, size_t max, size_t* place){
     if(*place >= max){
         return 0;
     }
-    char cur = text[*place];
+    unsigned char cur = text[*place];
     (*place)++;
     return cur;
 }
 
 /* De boom wordt gedecodeerd en opnieuw opgebouwd */
-Leaf* decode_tree(char* text, size_t max, size_t* place){
+Leaf* decode_tree(unsigned char* text, size_t max, size_t* place){
     char current = readbyte(text, max, place);
     if(current == 49){
         return make_only_leaf(NULL, NULL, readbyte(text, max, place), 2);
@@ -287,7 +295,7 @@ Leaf* decode_tree(char* text, size_t max, size_t* place){
 
 /* De tekst nodig om de huffman boom opnieuw op te bouwen wordt ingelezen */
 Leaf* read_huffman_tree(FILE *fp){
-    char *text;
+    unsigned char *text;
     char size_tree = 0;
     fread(&size_tree, sizeof(char), 1, fp);
     text = calloc((size_t) size_tree + 1, sizeof(char));
@@ -296,7 +304,9 @@ Leaf* read_huffman_tree(FILE *fp){
 
     make_only_leaf(NULL, NULL, 0, 2);
     size_t index = 0;
-    return decode_tree(text, (size_t) size_tree, &index);
+    Leaf* result = decode_tree(text, (size_t) size_tree, &index);
+    free(text);
+    return result;
 }
 
 /* De tekst wordt gedecodeerd aan de hand van de opnieuw opgebouwde huffmanboom */

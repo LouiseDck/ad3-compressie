@@ -20,4 +20,6 @@ Leaf* make_leaf(Leaf* zero_child, Leaf* one_child, unsigned char character, int 
 Leaf* make_only_leaf(Leaf* zero_child, Leaf* one_child, unsigned char character, int zero_or_one);
 encode_Item* make_encode_Item(unsigned char data, Leaf* code);
 
+void free_tree(Leaf* parent);
+void free_leaf(Leaf* leaf);
 #endif //COMPRESSIE_HUFFMAN_TREE_H

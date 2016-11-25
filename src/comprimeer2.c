@@ -23,13 +23,22 @@ int main(int argc, char *argv[]) {
 
 /* De ingelezen tekst wordt gesplitst */
 long long int * text_split(char *text, const char delimiter, unsigned int *number, int round,
-                           char *prev_buffer, int *prev_buffer_size){
+                           char *prev_buffer, int *prev_buffer_size) {
     // Indien het de eerste keer is dat deze functie wordt opgeroepen, mag de eerste byte '[' niet worden gelezen
-    if(!round) {
+    if (!round) {
         text++;
     }
+
     long long int* result = 0;
     unsigned int delim_count = 1; // mogelijks 1 teken na laatste delim
+    char* temp_text = text;
+    while (*temp_text) {
+        if (delimiter == temp_text[0]) {
+            delim_count++;
+        }
+        temp_text++;
+    }
+
 
     result = calloc(sizeof(long long int), delim_count);
     char delim[2] = {delimiter, 0};
@@ -195,8 +204,8 @@ void spec_encodeer(const char* filename, const char* output_file){
             long long *ints = text_split(prev_buffer, ',', &number_of_numbers, round, prev_buffer, &prev_buffer_size);
 
             // Het verschil tussen de long longs wordt berekend en het aantal bits nodig om deze verschillen binair voor te stellen
-            long long *difs = calculate_differences(ints, number_of_numbers);
-            unsigned char *bits = calloc(sizeof(unsigned char), number_of_numbers);
+            long long *difs = calculate_differences(ints, number_of_numbers + 1);
+            unsigned char *bits = calloc(sizeof(unsigned char), number_of_numbers + 1);
             nr_bits(difs, number_of_numbers + 1, bits);
 
             FILE *fp = fopen(output_file, "a+b");
@@ -283,7 +292,7 @@ void spec_decodeer(const char* filename, const char* output_filename){
             int *written = calloc(sizeof(int), number + 1);
             longlong_to_char(actual_numbers, buffer, written, number);
 
-             spec_write_text(buffer, written, outputfp, number, round);
+            spec_write_text(buffer, written, outputfp, number, round);
 
             free(encoded_text);
             free(decoded_longs);
@@ -291,9 +300,9 @@ void spec_decodeer(const char* filename, const char* output_filename){
             for (int i = 0; i < number; i++) {
                 free(buffer[i]);
             }
+            free(buffer);
             free(written);
             round++;
-            fflush(outputfp);
         }
     }
     fclose(fp);
