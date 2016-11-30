@@ -1,7 +1,3 @@
-//
-// Created by louise on 17/10/16.
-//
-
 #ifndef COMPRESSIE_LINKEDLIST_H
 #define COMPRESSIE_LINKEDLIST_H
 

@@ -1,7 +1,3 @@
-//
-// Created by louise on 05/10/16.
-//
-
 #ifndef COMPRESSIE_COMPRIMEER1_H
 #define COMPRESSIE_COMPRIMEER1_H
 

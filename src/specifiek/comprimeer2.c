@@ -1,6 +1,3 @@
-//
-// Created by louise on 21/11/16.
-//
 #include <stdlib.h>
 #include <stdio.h>
 #include <memory.h>
@@ -311,6 +308,7 @@ void spec_decodeer(const char* filename, const char* output_filename){
     fclose(outputfp);
 }
 
+/* De waarde van de volgende bit, bepaald door de byte_index en de bit_index wordt teruggegeven */
 int read_bit(unsigned char* text, int* byte_index, int* bit_index){
     if(*bit_index == 8) {
         *bit_index = 0;
@@ -324,6 +322,7 @@ int read_bit(unsigned char* text, int* byte_index, int* bit_index){
     return current_bit;
 }
 
+/* Er worden 6 bits ingelezen en teruggegeven */
 unsigned int read_size_bits(unsigned char* text, int* byte_index, int* bit_index){
     unsigned char cur_sum = 0;
     cur_sum += 32 * read_bit(text, byte_index, bit_index);
@@ -336,6 +335,7 @@ unsigned int read_size_bits(unsigned char* text, int* byte_index, int* bit_index
     return cur_sum;
 }
 
+/* Het aantal bits waardoor het getal wordt voorgesteld wordt gelezen en het getal teruggegeven */
 long long int read_long_bits(unsigned char *text, int *byte_index, int *bit_index, unsigned int size){
     long long cur_sum = 0;
     for(unsigned int i = 1; i <= size; i++){
@@ -348,7 +348,6 @@ long long int read_long_bits(unsigned char *text, int *byte_index, int *bit_inde
 }
 
 void spec_decode_text(unsigned char *text, unsigned int number, long long int *decoded_longs){
-
     int byte_index = 0;
     int bit_index = 0;
     for(int i = 0; i < number; i++){
@@ -357,6 +356,7 @@ void spec_decode_text(unsigned char *text, unsigned int number, long long int *d
         decoded_longs[i] = current;
     }
 }
+
 void spec_write_text(char** decoded_text, int* sizes, FILE* outputfp, int number, int round){
     char delim = ',';
     if(round > 0){

@@ -1,0 +1,8 @@
+//
+// Created by louise on 30/11/16.
+//
+
+#ifndef COMPRESSIE_CORRECTNESS_TEST_H
+#define COMPRESSIE_CORRECTNESS_TEST_H
+
+#endif //COMPRESSIE_CORRECTNESS_TEST_H

@@ -1,6 +1,3 @@
-//
-// Created by louise on 18/10/16.
-//
 #include <stdlib.h>
 #include "huffman_tree.h"
 

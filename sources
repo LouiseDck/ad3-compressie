@@ -1,3 +1,3 @@
-comprimeer1: comprimeer1.c huffman_tree.c linkedlist.c
-comprimeer2: comprimeer2.c
+comprimeer1: algemeen/comprimeer1.c algemeen/huffman_tree.c algemeen/linkedlist.c
+comprimeer2: specifiek/comprimeer2.c
 

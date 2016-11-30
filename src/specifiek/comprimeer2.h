@@ -1,6 +1,3 @@
-//
-// Created by louise on 21/11/16.
-//
 #include "stdio.h"
 
 #ifndef COMPRESSIE_COMPRIMEER2_H
